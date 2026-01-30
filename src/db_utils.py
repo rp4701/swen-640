@@ -45,3 +45,15 @@ def exec_commit(sql, args={}):
     conn.commit()
     conn.close()
     return result
+
+##DC2
+def exec_commit_returning(sql, args={}):
+    """Execute a write query that RETURNS rows (e.g., INSERT ... RETURNING)."""
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql, args)
+    rows = cur.fetchall()
+    conn.commit()
+    conn.close()
+    return rows
+
