@@ -60,3 +60,46 @@ All tests are deterministic and network-free.
 Initialize schema:
 ```bash
 python -c "from src import db_utils; db_utils.exec_sql_file('data/schema.sql')"
+
+## DI1: Data Integrity I — Qualitative Text Normalization
+
+This iteration builds on DC2 by normalizing qualitative text artifacts
+collected from software repositories. The goal is to reduce noise and
+inconsistencies in raw data prior to downstream modeling and analysis.
+
+DI1 introduces deterministic, test-driven normalization of user identities,
+free-text fields, and commit messages, while preserving all existing DC
+behavior.
+
+### Normalized Artifacts
+
+The following transformations are applied:
+
+- **User canonicalization**
+  - Contributor logins are lowercased and whitespace-normalized
+  - Common bot accounts (e.g., dependabot, renovate, github-actions) are detected
+  - Results stored as `author_norm` and `is_bot`
+
+- **Text normalization**
+  - Markdown removed from issue and pull request titles
+  - Inline and fenced code preserved using `<CODE>` markers
+  - Whitespace, newlines, and control characters normalized
+  - Results stored as `title_clean`
+
+- **Conventional Commit parsing**
+  - Commit messages parsed into subject, body, type, scope, and breaking flag
+  - Supports common Conventional Commit formats (e.g., `feat`, `fix`, `!`)
+  - Results stored in `subject`, `body`, `cc_type`, `cc_scope`, `cc_breaking`
+
+### Database Integration
+
+Normalized data is written to additional columns on existing tables.
+Schema updates are handled automatically via idempotent helpers
+and do not require manual modification.
+
+### Running with DI1 Enabled
+
+After mining raw data, qualitative normalization can be applied by running:
+
+```bash
+pytest test/test_qual_clean.py -v

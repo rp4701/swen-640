@@ -6,13 +6,26 @@ import shutil
 from git import Repo
 
 from src import git_miner
+from src.qual_clean import (
+    clean_issues_db,
+    clean_prs_db,
+    clean_commits_db,
+)
 
 
 def main(argv=None):
     argv = argv or sys.argv[1:]
-    p = argparse.ArgumentParser(description="Clone a repository (or use local path) and run git_miner")
-    p.add_argument("repo", help="owner/repo (e.g. octocat/Hello-World) or local repo path")
-    p.add_argument("--token", help="GitHub token (or set GITHUB_TOKEN) for private repo cloning")
+    p = argparse.ArgumentParser(
+        description="Clone a repository (or use local path) and run git_miner"
+    )
+    p.add_argument(
+        "repo",
+        help="owner/repo (e.g. octocat/Hello-World) or local repo path"
+    )
+    p.add_argument(
+        "--token",
+        help="GitHub token (or set GITHUB_TOKEN) for private repo cloning"
+    )
     args = p.parse_args(argv)
 
     token = args.token or os.environ.get("GITHUB_TOKEN")
@@ -20,6 +33,7 @@ def main(argv=None):
 
     tmp_dir = None
     repo_path = target
+
     try:
         # If given an owner/repo string and it's not a local path, clone it
         if "/" in target and not os.path.isdir(target):
@@ -34,11 +48,32 @@ def main(argv=None):
 
         print(f"Running mine_and_store on {repo_path}...")
         info = git_miner.mine_and_store(repo_path)
-        print(f"Stored commit {info.get('hash')} by {info.get('author_name')} at {info.get('timestamp')}")
+        print(
+            f"Stored commit {info.get('hash')} "
+            f"by {info.get('author_name')} "
+            f"at {info.get('timestamp')}"
+        )
+
+        # ------------------------------------------------------------------
+        # DI1: Apply qualitative data normalization
+        # ------------------------------------------------------------------
+        print("Applying DI1 qualitative normalization...")
+
+        issues_count = clean_issues_db()
+        print(f"Normalized {issues_count} issues")
+
+        prs_count = clean_prs_db()
+        print(f"Normalized {prs_count} pull requests")
+
+        commits_count = clean_commits_db()
+        print(f"Normalized {commits_count} commits")
+
+        print("DI1 normalization complete.")
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         raise
+
     finally:
         if tmp_dir:
             shutil.rmtree(tmp_dir, ignore_errors=True)
