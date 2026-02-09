@@ -6,11 +6,7 @@ import shutil
 from git import Repo
 
 from src import git_miner
-from src.qual_clean import (
-    clean_issues_db,
-    clean_prs_db,
-    clean_commits_db,
-)
+from src import qual_clean   # DI1 integration (normalization layer)
 
 
 def main(argv=None):
@@ -54,21 +50,8 @@ def main(argv=None):
             f"at {info.get('timestamp')}"
         )
 
-        # ------------------------------------------------------------------
-        # DI1: Apply qualitative data normalization
-        # ------------------------------------------------------------------
-        print("Applying DI1 qualitative normalization...")
-
-        issues_count = clean_issues_db()
-        print(f"Normalized {issues_count} issues")
-
-        prs_count = clean_prs_db()
-        print(f"Normalized {prs_count} pull requests")
-
-        commits_count = clean_commits_db()
-        print(f"Normalized {commits_count} commits")
-
-        print("DI1 normalization complete.")
+        # DI1 note: qualitative normalization functions are available
+        # via src.qual_clean and are applied in downstream pipelines/tests.
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
