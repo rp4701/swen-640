@@ -6,7 +6,8 @@ import shutil
 from git import Repo
 
 from src import git_miner
-from src import qual_clean   # DI1 integration (normalization layer)
+from src import qual_clean   # DI1 integration
+from src import sampling_algorithms as sampling   # ✅ DI2 import
 
 
 def main(argv=None):
@@ -31,27 +32,63 @@ def main(argv=None):
     repo_path = target
 
     try:
-        # If given an owner/repo string and it's not a local path, clone it
+        # Clone if needed
         if "/" in target and not os.path.isdir(target):
             tmp_dir = tempfile.mkdtemp(prefix="gitminer_")
             if token:
                 clone_url = f"https://{token}@github.com/{target}.git"
             else:
                 clone_url = f"https://github.com/{target}.git"
+
             print(f"Cloning {target} into {tmp_dir}...")
             Repo.clone_from(clone_url, tmp_dir)
             repo_path = tmp_dir
 
         print(f"Running mine_and_store on {repo_path}...")
         info = git_miner.mine_and_store(repo_path)
+
         print(
             f"Stored commit {info.get('hash')} "
             f"by {info.get('author_name')} "
             f"at {info.get('timestamp')}"
         )
+        # DI2: Sampling Demonstration on real repository
+        print("\n--- DI2 Sampling Demo ---")
 
-        # DI1 note: qualitative normalization functions are available
-        # via src.qual_clean and are applied in downstream pipelines/tests.
+        repo = Repo(repo_path)
+        commits = list(repo.iter_commits())
+
+        if not commits:
+            print("No commits found for sampling.")
+            return
+
+        # Uniform sampling
+        uniform_sample = sampling.sample_uniform(commits, k=min(10, len(commits)), seed=42)
+        print(f"Uniform sample size: {len(uniform_sample)}")
+
+        # Systematic sampling
+        systematic_sample = sampling.sample_systematic(commits, step=5, seed=42)
+        print(f"Systematic sample size: {len(systematic_sample)}")
+
+        # Stratified sampling by author email
+        def author_key(commit):
+            return getattr(commit.author, "email", "unknown")
+
+        stratified_sample = sampling.sample_stratified(
+            commits,
+            key=author_key,
+            frac=0.2,
+            seed=42,
+        )
+        print(f"Stratified sample size: {len(stratified_sample)}")
+
+        # Sample size estimation
+        required_n = sampling.sample_size_proportion(
+            N=len(commits),
+            p=0.5,
+            margin=0.05,
+        )
+        print(f"Required labeling sample size (95% CI): {required_n}")
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

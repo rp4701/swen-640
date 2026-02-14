@@ -61,7 +61,7 @@ Initialize schema:
 ```bash
 python -c "from src import db_utils; db_utils.exec_sql_file('data/schema.sql')"
 
-## DI1: Data Integrity I — Qualitative Text Normalization
+ DI1: Data Integrity I — Qualitative Text Normalization
 
 This iteration builds on DC2 by normalizing qualitative text artifacts
 collected from software repositories. The goal is to reduce noise and
@@ -103,3 +103,31 @@ After mining raw data, qualitative normalization can be applied by running:
 
 ```bash
 pytest test/test_qual_clean.py -v
+
+
+DI2: Data Integrity II — Sampling & Sample Size
+
+DI2 introduces a reproducible sampling library to prepare mined repository
+data for statistically valid analysis. The goal is to support deterministic
+sampling and estimate how many artifacts must be analyzed to achieve a
+desired margin of error.
+
+### Implemented Features
+
+Implemented in `src/sampling_algorithms.py`:
+
+- **Uniform sampling** — random sampling without replacement
+- **Stratified sampling** — balanced sampling across groups using `n` or `frac`
+- **Systematic sampling** — random start followed by every *k*-th item
+- **Sample size (proportion)** — computes required sample size with finite population correction
+- **Sample size (mean)** — computes required sample size for estimating averages
+
+All sampling is deterministic when a seed is provided using isolated random
+number generators (`random.Random(seed)`).
+
+### Tests
+
+Run DI2 tests:
+
+```bash
+python -m pytest test/test_sampling_algorithms.py -v
