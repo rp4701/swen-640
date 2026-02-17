@@ -7,7 +7,7 @@ from git import Repo
 
 from src import git_miner
 from src import qual_clean   # DI1 integration
-from src import sampling_algorithms as sampling   # ✅ DI2 import
+from src import sampling_algorithms as sampling   #  DI2 import
 
 
 def main(argv=None):
