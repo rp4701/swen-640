@@ -105,7 +105,7 @@ After mining raw data, qualitative normalization can be applied by running:
 pytest test/test_qual_clean.py -v
 
 
-DI2: Data Integrity II — Sampling & Sample Size
+## DI2: Data Integrity II — Sampling & Sample Size
 
 DI2 introduces a reproducible sampling library to prepare mined repository
 data for statistically valid analysis. The goal is to support deterministic
