@@ -131,3 +131,41 @@ Run DI2 tests:
 
 ```bash
 python -m pytest test/test_sampling_algorithms.py -v
+
+# DA1 – Identifier Analysis using srcML
+
+## Overview
+This assignment implements a small static analysis pipeline that extracts identifier-level information from source code using srcML and computes file-level naming and vocabulary metrics.
+
+The system parses srcML XML, identifies functions, classes, parameters, and variables, and generates aggregate statistics describing naming conventions and identifier quality.
+
+## Implementation
+The following components were implemented:
+
+- `extract_identifiers_dom()`  
+  Parses srcML XML using ElementTree (DOM approach) and extracts identifier data.
+
+- `aggregate_identifier_features()`  
+  Computes file-level metrics including:
+  - number of identifiers
+  - average identifier length
+  - token statistics
+  - vocabulary size and diversity
+  - naming convention percentages
+
+- `build_file_identifier_dataset()`  
+  Builds dataset rows from multiple files.
+
+## Workflow
+The main pipeline performs:
+
+1. Repository mining using previous assignments.
+2. Retrieval of file content from Git history.
+3. Conversion of source code to srcML XML using `srcml_runner`.
+4. Identifier extraction and aggregation.
+5. Automatic dataset generation.
+
+Run the program with:
+
+```bash
+python main.py .

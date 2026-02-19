@@ -102,7 +102,7 @@ def main(argv=None):
         xml = srcml_runner.run_srcml_on_repo_file(
             repo_path,
             #"src/da1_identifiers.py",
-            "example.java",
+            "src/example.java",
             commit="HEAD",
         )
         
