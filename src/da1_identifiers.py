@@ -211,10 +211,7 @@ def build_file_identifier_dataset(
 
     return dataset
 
-
-# ============================================================
 # SAX version not required for this assignment
-# ============================================================
 
 def extract_identifiers_sax(xml_str: str) -> List[Dict[str, Any]]:
     raise NotImplementedError(
