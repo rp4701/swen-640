@@ -102,9 +102,10 @@ def main(argv=None):
         xml = srcml_runner.run_srcml_on_repo_file(
             repo_path,
             #"src/da1_identifiers.py",
-            "example.java"
+            "example.java",
             commit="HEAD",
         )
+        
 
         identifiers = da1_identifiers.extract_identifiers_dom(xml)
         summary = da1_identifiers.aggregate_identifier_features(identifiers)
