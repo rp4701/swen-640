@@ -71,3 +71,42 @@ def run_srcml_on_repo_file(
     """Read file content at commit and return srcML XML output."""
     text = get_file_content_at_commit(repo_path, file_path, commit=commit)
     return run_srcml_on_text(text, filename_hint=file_path, srcml_path=srcml_path)
+
+
+def run_srcml_on_directory(dir_path: str, srcml_path: Optional[str] = None) -> str:
+    srcml = srcml_path or find_srcml_executable()
+
+    if not srcml:
+        raise RuntimeError("srcML executable not found")
+
+    fd_out, out_path = tempfile.mkstemp(suffix=".srcml")
+    os.close(fd_out)
+
+    try:
+        cmd = [
+            srcml,
+            dir_path,
+            "--recursive",
+            "--exclude", ".git",
+            "--exclude", "venv",
+            "--exclude", "__pycache__",
+            "--exclude", "node_modules",
+            "-o",
+            out_path,
+        ]
+
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        with open(out_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+
+    finally:
+        try:
+            os.remove(out_path)
+        except Exception:
+            pass

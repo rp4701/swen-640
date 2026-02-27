@@ -1,0 +1,17 @@
+VOCABULARY ALIGNMENT REPORT
+========================================
+
+commit_identifier
+  Vocabulary overlap: 0.0%
+  Shared vocabulary size: 0
+  Cluster similarity (ARI): 0.000
+
+commit_comment
+  Vocabulary overlap: 0.0%
+  Shared vocabulary size: 0
+  Cluster similarity (ARI): 0.000
+
+identifier_comment
+  Vocabulary overlap: 0.0%
+  Shared vocabulary size: 0
+  Cluster similarity (ARI): 0.000

@@ -57,3 +57,21 @@ def exec_commit_returning(sql, args={}):
     conn.close()
     return rows
 
+def exec_many(sql, args_list):
+    """Execute a parameterised statement once per row using executemany().
+
+    Much faster than calling exec_commit() in a loop because it reuses a
+    single connection and cursor for the entire batch.
+
+    Parameters:
+    - sql: parameterised SQL with %(name)s placeholders
+    - args_list: iterable of dicts, one per row
+    """
+    items = list(args_list)
+    if not items:
+        return
+    conn = connect()
+    cur = conn.cursor()
+    cur.executemany(sql, items)
+    conn.commit()
+    conn.close()

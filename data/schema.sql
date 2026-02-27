@@ -135,3 +135,18 @@ CREATE TABLE IF NOT EXISTS ci_jobs (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_job_identity
 ON ci_jobs(provider, repo, job_id);
+
+
+CREATE TABLE IF NOT EXISTS code_identifiers (
+    id          SERIAL PRIMARY KEY,
+    file_path   TEXT NOT NULL,
+    name        TEXT NOT NULL,          -- raw identifier (e.g. "getUserData")
+    kind        TEXT NOT NULL           -- function | class | variable | parameter
+);
+
+CREATE TABLE IF NOT EXISTS code_comments (
+    id           SERIAL PRIMARY KEY,
+    file_path    TEXT NOT NULL,
+    comment_text TEXT NOT NULL          -- cleaned comment text (markers stripped)
+);
+
