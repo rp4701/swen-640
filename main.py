@@ -17,9 +17,7 @@ from src import db_utils
 from src import da2_vocabulary
 
 
-# ============================================================
 # DA2: Mine Code Artifacts (Identifiers + Comments)
-# ============================================================
 
 def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
     print("  Running srcML on repository directory...")
@@ -64,10 +62,7 @@ def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
                 )
 
                 element = ET.fromstring(result.stdout.encode("utf-8"))
-                element.set(
-                    "filename",
-                    os.path.relpath(file_path, repo_path),
-                )
+                element.set("filename", os.path.relpath(file_path, repo_path))
 
                 units.append(element)
 
@@ -76,7 +71,6 @@ def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
 
             if file_limit and len(units) >= file_limit:
                 break
-
         if file_limit and len(units) >= file_limit:
             break
 
@@ -84,6 +78,7 @@ def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
 
     id_rows = []
     cm_rows = []
+    all_identifiers_summary = {}
 
     for unit in units:
         rel_path = unit.get("filename", "")
@@ -91,47 +86,45 @@ def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
 
         # ---- DA1 identifiers ----
         try:
-            for row in da1_identifiers.extract_identifiers_dom(unit_xml):
-                id_rows.append({
-                    "fp": rel_path,
-                    "name": row["name"],
-                    "kind": row["kind"],
-                })
+            identifiers = da1_identifiers.extract_identifiers_dom(unit_xml)
+            for row in identifiers:
+                id_rows.append({"fp": rel_path, "name": row["name"], "kind": row["kind"]})
+            summary = da1_identifiers.aggregate_identifier_features(identifiers)
+            all_identifiers_summary.update(summary)
         except Exception:
-            pass
+            identifiers = []
 
         # ---- DA2 comments ----
         try:
             for text in da2_vocabulary.extract_comments_from_srcml(unit_xml):
                 if text.strip():
-                    cm_rows.append({
-                        "fp": rel_path,
-                        "ct": text,
-                    })
+                    cm_rows.append({"fp": rel_path, "ct": text})
         except Exception:
             pass
 
     db_utils.exec_many(
-        "INSERT INTO code_identifiers (file_path, name, kind) "
-        "VALUES (%(fp)s, %(name)s, %(kind)s);",
+        "INSERT INTO code_identifiers (file_path, name, kind) VALUES (%(fp)s, %(name)s, %(kind)s);",
         id_rows,
     )
 
     db_utils.exec_many(
-        "INSERT INTO code_comments (file_path, comment_text) "
-        "VALUES (%(fp)s, %(ct)s);",
+        "INSERT INTO code_comments (file_path, comment_text) VALUES (%(fp)s, %(ct)s);",
         cm_rows,
     )
 
-    print(
-        f"    -> {len(id_rows)} identifiers, "
-        f"{len(cm_rows)} comments stored"
-    )
+    print(f"    -> {len(id_rows)} identifiers, {len(cm_rows)} comments stored")
 
+    os.makedirs("output", exist_ok=True)
+    output_path = "output/identifier_dataset.csv"
 
-# ============================================================
+    if all_identifiers_summary:
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["file_path", *all_identifiers_summary.keys()])
+            writer.writeheader()
+            writer.writerow({"file_path": "repository", **all_identifiers_summary})
+        print(f"Identifier summary CSV written to {output_path}")
+
 # DA2 Analyze Stage
-# ============================================================
 
 def cmd_analyze(args) -> None:
     out = args.output_dir
@@ -154,6 +147,9 @@ def cmd_analyze(args) -> None:
     print(f"  identifier tokens: {len(identifier_tokens)}")
     print(f"  comment tokens: {len(comment_tokens)}")
 
+    if not commit_tokens:
+        print("Warning: No commit tokens found. Ensure git_miner completed successfully.")
+
     sources = [
         ("commit", commit_tokens, "Commit Message Vocabulary"),
         ("identifier", identifier_tokens, "Code Identifier Vocabulary"),
@@ -164,53 +160,37 @@ def cmd_analyze(args) -> None:
         if not tokens:
             print(f"[{name}] no tokens — skipping")
             continue
-
         print(f"Clustering {name} tokens (k={k})...")
-
         labels, vectors, _ = da2_vocabulary.cluster_vocabulary(tokens, k=k)
-
         coords = da2_vocabulary.reduce_dimensions(vectors, method="pca")
-
-        da2_vocabulary.visualize_clusters(
-            coords,
-            labels,
-            tokens,
-            title=f"{title} – k-means (k={k})",
-            output_path=os.path.join(out, f"{name}_clusters.png"),
-        )
+        da2_vocabulary.visualize_clusters(coords, labels, tokens, title=f"{title} – k-means (k={k})",
+                                          output_path=os.path.join(out, f"{name}_clusters.png"))
 
     alignment = dataset.get("alignment", {})
 
-    report_lines = ["VOCABULARY ALIGNMENT REPORT", "=" * 40, ""]
+    if commit_tokens:
+        report_lines = ["VOCABULARY ALIGNMENT REPORT", "=" * 40, ""]
+        for key, m in alignment.items():
+            report_lines += [
+                key,
+                f"  Vocabulary overlap: {m['vocab_overlap']:.1%}",
+                f"  Shared vocabulary size: {m['shared_vocab_size']}",
+                f"  Cluster similarity (ARI): {m['cluster_similarity']:.3f}",
+                "",
+            ]
+        report_path = os.path.join(out, "alignment_report.txt")
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(report_lines))
+        print(f"Report written → {report_path}")
+    else:
+        print("Skipping alignment report due to no commit tokens.")
 
-    for key, m in alignment.items():
-        report_lines += [
-            key,
-            f"  Vocabulary overlap: {m['vocab_overlap']:.1%}",
-            f"  Shared vocabulary size: {m['shared_vocab_size']}",
-            f"  Cluster similarity (ARI): {m['cluster_similarity']:.3f}",
-            "",
-        ]
 
-    report_path = os.path.join(out, "alignment_report.txt")
-
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(report_lines))
-
-    print(f"Report written → {report_path}")
-
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
 
 def main(argv=None):
     argv = argv or sys.argv[1:]
 
-    parser = argparse.ArgumentParser(
-        description="Clone a repository (or use local path) and run analysis pipeline"
-    )
-
+    parser = argparse.ArgumentParser(description="Clone a repository (or use local path) and run analysis pipeline")
     parser.add_argument("repo")
     parser.add_argument("--token")
     parser.add_argument("--analyze", action="store_true")
@@ -220,66 +200,82 @@ def main(argv=None):
     parser.add_argument("--file-limit", type=int, default=None)
 
     args = parser.parse_args(argv)
-
-    # ✅ remember if we should analyze AFTER mining
     run_analysis_after = args.analyze
 
     token = args.token or os.environ.get("GITHUB_TOKEN")
     target = args.repo
-
     tmp_dir = None
     repo_path = target
 
     try:
         if "/" in target and not os.path.isdir(target):
             tmp_dir = tempfile.mkdtemp(prefix="gitminer_")
-
-            clone_url = (
-                f"https://{token}@github.com/{target}.git"
-                if token else
-                f"https://github.com/{target}.git"
-            )
-
+            clone_url = f"https://{token}@github.com/{target}.git" if token else f"https://github.com/{target}.git"
             print(f"Cloning {target} into {tmp_dir}...")
             Repo.clone_from(clone_url, tmp_dir)
             repo_path = tmp_dir
 
         print(f"Running mine_and_store on {repo_path}...")
 
-        result_holder = {"info": None, "error": None}
+        try:
+            db_utils.exec_commit("TRUNCATE commit_files CASCADE;")
+            db_utils.exec_commit("TRUNCATE commit_stats CASCADE;")
+            db_utils.exec_commit("TRUNCATE commit_parents CASCADE;")
+            db_utils.exec_commit("TRUNCATE commits CASCADE;")
+        except Exception:
+            pass
 
+        result_holder = {"info": None, "error": None}
         def run_miner():
             try:
                 result_holder["info"] = git_miner.mine_and_store(repo_path)
             except Exception as e:
                 result_holder["error"] = e
-
         t = threading.Thread(target=run_miner, daemon=True)
         t.start()
-        t.join(timeout=120)
+        t.join(timeout=300)  # increased timeout
+
+        if result_holder["error"]:
+            raise result_holder["error"]
+        elif not result_holder["info"]:
+            print("Warning: No commits mined. DA2 analysis may be incomplete.")
 
         if result_holder["info"]:
             info = result_holder["info"]
-            print(
-                f"Stored commit {info.get('hash')} "
-                f"by {info.get('author_name')} "
-                f"at {info.get('timestamp')}"
-            )
+            print(f"Stored commit {info.get('hash')} by {info.get('author_name')} at {info.get('timestamp')}")
 
         _mine_code_artifacts(repo_path)
 
+        # ---- DI2 Commit Sampling Demo ----
         print("\nDI2 Sampling Demo")
-
         repo = Repo(repo_path)
         commits = list(repo.iter_commits())
 
         if commits:
-            uniform_sample = sampling.sample_uniform(
-                commits, k=min(10, len(commits)), seed=42
-            )
+            # Uniform sample
+            uniform_sample = sampling.sample_uniform(commits, k=min(10, len(commits)), seed=42)
             print(f"Uniform sample size: {len(uniform_sample)}")
+            for c in uniform_sample:
+                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
 
-        # ✅ RUN ANALYSIS IN SAME SESSION
+            # Systematic sample
+            systematic_sample = sampling.sample_systematic(commits, step=5, seed=42)
+            print(f"Systematic sample size: {len(systematic_sample)}")
+            for c in systematic_sample:
+                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
+
+            # Stratified sample
+            def author_key(commit):
+                return getattr(commit.author, "email", "unknown")
+            stratified_sample = sampling.sample_stratified(commits, key=author_key, frac=0.2, seed=42)
+            print(f"Stratified sample size: {len(stratified_sample)}")
+            for c in stratified_sample:
+                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
+
+            # Required labeling sample size
+            required_n = sampling.sample_size_proportion(N=len(commits), p=0.5, margin=0.05)
+            print(f"Required labeling sample size (95% CI): {required_n}")
+
         if run_analysis_after:
             print("\nStarting DA2 analysis...")
             cmd_analyze(args)
