@@ -114,7 +114,7 @@ desired margin of error.
 
 ### Implemented Features
 
-Implemented in `src/sampling_algorithms.py`:
+**Implemented in `src/sampling_algorithms.py`:**
 
 - **Uniform sampling** — random sampling without replacement
 - **Stratified sampling** — balanced sampling across groups using `n` or `frac`
@@ -169,3 +169,47 @@ Run the program with:
 
 ```bash
 python main.py .
+
+
+##DA2 – Vocabulary Clustering, Alignment & Feature Engineering
+Overview
+
+**This assignment extracts, normalizes, and analyzes vocabulary from software repositories, integrating three text sources:**
+
+Commit messages – what developers write about changes
+
+Code identifiers – functions, classes, variables, parameters
+
+Code comments – inline documentation
+
+## Implementation
+Components implemented in src/da2_vocabulary.py:
+
+extract_comments_from_srcml() – extracts cleaned comment text from srcML XML
+extract_vocabulary() – tokenizes and normalizes text
+cluster_vocabulary() – k-means clustering on token embeddings
+reduce_dimensions() – PCA or t-SNE for 2D visualization
+visualize_clusters() – scatter plots of clusters
+measure_alignment() – computes overlap metrics and cluster similarity
+build_vocabulary_dataset() – integrates commits, identifiers, comments, clusters, and alignment metrics
+
+## Workflow
+
+The main pipeline in main.py performs:
+Mine repository commits, identifiers, and comments
+Normalize vocabulary for each source
+Cluster tokens and reduce dimensions for visualization
+Compute pairwise alignment between commits, identifiers, and comments
+
+Generate output:
+**Cluster scatter plots (commit_clusters.png, identifier_clusters.png, comment_clusters.png)**
+**Alignment report (alignment_report.txt) with top tokens, cluster themes, and metrics**
+
+## Run DI2 tests:
+
+```bash
+python -m pytest test/test_da2_vocabulary.py -v
+
+## To generate output:
+python main.py . --analyze 
+
