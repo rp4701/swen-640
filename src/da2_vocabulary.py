@@ -98,7 +98,8 @@ def _get_spacy():
 
 def cluster_vocabulary(
     tokens: List[str],
-    k: int = 5
+    k: int = 5,
+    vectorizer_params: Optional[Dict[str, Any]] = None
 ) -> Tuple[np.ndarray, np.ndarray, Any]:
 
     if len(tokens) == 0:
