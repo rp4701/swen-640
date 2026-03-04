@@ -15,6 +15,7 @@ from src import da1_identifiers
 from src import srcml_runner
 from src import db_utils
 from src import da2_vocabulary
+from src.da2_vocabulary import build_vocabulary_dataset
 
 
 # DA2: Mine Code Artifacts (Identifiers + Comments)
