@@ -1,0 +1,35 @@
+M1 MODEL REPORT
+========================================
+
+Model type:  decision_tree
+Features:    9
+Train size:  26
+Test size:   7
+Accuracy:    85.7%
+
+Classification report (test set):
+------------------------------------
+              precision    recall  f1-score   support
+
+        docs       0.00      0.00      0.00         1
+     feature       1.00      1.00      1.00         4
+       other       0.67      1.00      0.80         2
+
+    accuracy                           0.86         7
+   macro avg       0.56      0.67      0.60         7
+weighted avg       0.76      0.86      0.80         7
+
+Feature importances (descending):
+------------------------------------
+  log_token_count           0.6562
+  comment_overlap           0.3438
+  cluster_0_frac            0.0000
+  cluster_1_frac            0.0000
+  cluster_2_frac            0.0000
+  cluster_3_frac            0.0000
+  cluster_4_frac            0.0000
+  type_token_ratio          0.0000
+  id_overlap                0.0000
+
+Interpretation:
+  [TODO: Write 2-3 sentences interpreting your results here]

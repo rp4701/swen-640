@@ -216,10 +216,6 @@ def evaluate_model(
     }
 
 
-# ---------------------------------------------------------------------------
-# PROVIDED FUNCTIONS (copy exactly)
-# ---------------------------------------------------------------------------
-
 def plot_feature_importance(
     model: Any,
     feature_names: List[str],
@@ -299,10 +295,7 @@ def plot_confusion_matrix(
 def load_commit_data(commit_limit: Optional[int] = None) -> List[Dict[str, str]]:
     from src import db_utils
 
-    query = (
-        "SELECT message FROM commits "
-        "WHERE message IS NOT NULL AND message <> ''"
-    )
+    query = "SELECT TRIM(message) FROM commits WHERE message IS NOT NULL"
     if commit_limit:
         query += f" LIMIT {int(commit_limit)}"
     query += ";"

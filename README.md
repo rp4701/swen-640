@@ -213,3 +213,36 @@ python -m pytest test/test_da2_vocabulary.py -v
 ## To generate output:
 python main.py . --analyze 
 
+##STRATA — M1: Modeling I (Commit Type Classification)
+
+This assignment builds a supervised machine learning model to predict commit types from repository vocabulary features.
+
+## Implementation
+
+Components implemented in src/m1_modeling.py:
+
+label_commit() – heuristic commit labeling
+
+build_commit_features() – feature engineering using cluster fractions and vocabulary statistics
+
+build_feature_matrix() – builds feature matrix and labels
+
+split_dataset() – train/test split
+
+train_classifier() – decision tree or random forest model
+
+evaluate_model() – accuracy, classification report, confusion matrix
+
+plot_feature_importance() – feature importance visualization
+
+plot_confusion_matrix() – confusion matrix heatmap
+
+load_commit_data() – loads commit messages from the database
+
+## Run M1 Tests
+python -m pytest test/test_m1_modeling.py -v
+
+## Generate Output
+python main.py . --predict
+python main.py . --analyze --predict
+

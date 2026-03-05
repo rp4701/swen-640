@@ -7,47 +7,11 @@ commit_identifier
   Cluster similarity (ARI): 0.000
 
 commit_comment
-  Vocabulary overlap: 15.5%
-  Shared vocabulary size: 13
-  Cluster similarity (ARI): -0.055
+  Vocabulary overlap: 16.3%
+  Shared vocabulary size: 17
+  Cluster similarity (ARI): -0.005
 
 identifier_comment
   Vocabulary overlap: 0.0%
   Shared vocabulary size: 0
   Cluster similarity (ARI): 0.000
-
-
-Commit Clusters
-----------------------------------------
-Cluster 0: fix, bug, error, handle, issue, test, exception, crash, fail, patch
-Theme: Bug Fixes
-Cluster 1: add, implement, feature, support, new, module, refactor, function, api, endpoint
-Theme: New Features
-
-Identifier Clusters
-----------------------------------------
-Cluster 0: user, id, name, email, password, token, account, auth, session, profile
-Theme: User Authentication
-Cluster 1: data, result, list, dict, item, value, record, table, key, entry
-Theme: Data Structures
-
-Comment Clusters
-----------------------------------------
-Cluster 0: check, validate, handle, error, ensure, process, log, warning, exception, catch
-Theme: Error Handling
-
-Brief Interpretation:
-----------------------------------------
-Commit messages partially reflect the vocabulary used in code aomments, as shown by the 15% overlap.
-Identifiers rarely match commit messages directly, resulting in zero overlap. 
-
-Do commit messages use the same vocabulary as identifier names?
-Commit messafes do not share vocabulary with identifiers, indicating that developers describe changes in
-language rather than reusing names.
-
-Are comments closer to code or commits in vocabulary?
-Comments share some vocabulary with commit messages but rarely overlap with identifiers, indicating that inline
-comments tend to describe behavior rather than reuse code terminology.
-
-What are the main vocabulary clusters?
-Clusters show clear themes, commits focus on bug fixes, identifiers on user authentication and comments on error handling.

@@ -25,7 +25,7 @@ from src import m1_modeling
 def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
     print("  Running srcML on repository directory...")
 
-    db_utils.exec_sql_file("data/schema.sql")
+    #db_utils.exec_sql_file("data/schema.sql")
 
     try:
         db_utils.exec_commit("DELETE FROM code_identifiers;")
@@ -271,8 +271,52 @@ def cmd_predict(args) -> None:
     )
 
     print(f"Saved plots → {fi_path}, {cm_path}")
+    # Build classification report text
+    from sklearn.metrics import classification_report
 
+    clf_report_text = classification_report(
+        y_test,
+        results["y_pred"],
+        labels=results["class_names"],
+        zero_division=0,
+    )
 
+    # Write model report
+    report_lines = [
+        "M1 MODEL REPORT",
+        "=" * 40,
+        "",
+        f"Model type:  {args.model_type}",
+        f"Features:    {len(feature_names)}",
+        f"Train size:  {len(X_train)}",
+        f"Test size:   {len(X_test)}",
+        f"Accuracy:    {results['accuracy']:.1%}",
+        "",
+        "Classification report (test set):",
+        "-" * 36,
+        clf_report_text,
+        "Feature importances (descending):",
+        "-" * 36,
+    ]
+
+    importances = model.feature_importances_
+    ranked = sorted(zip(feature_names, importances), key=lambda x: -x[1])
+
+    for name, imp in ranked:
+        report_lines.append(f"  {name:<25} {imp:.4f}")
+
+    report_lines += [
+        "",
+        "Interpretation:",
+        "  [TODO: Write 2-3 sentences interpreting your results here]",
+    ]
+
+    report_path = os.path.join(out, "model_report.txt")
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(report_lines))
+
+    print(f"Saved report → {report_path}")
 def main(argv=None):
     argv = argv or sys.argv[1:]
 
