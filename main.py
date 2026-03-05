@@ -7,6 +7,7 @@ import csv
 import xml.etree.ElementTree as ET
 import threading
 from git import Repo
+from collections import Counter
 
 from src import git_miner
 from src import qual_clean
@@ -16,6 +17,7 @@ from src import srcml_runner
 from src import db_utils
 from src import da2_vocabulary
 from src.da2_vocabulary import build_vocabulary_dataset
+from src import m1_modeling
 
 
 # DA2: Mine Code Artifacts (Identifiers + Comments)
@@ -125,6 +127,7 @@ def _mine_code_artifacts(repo_path: str, file_limit: int = None) -> None:
             writer.writerow({"file_path": "repository", **all_identifiers_summary})
         print(f"Identifier summary CSV written to {output_path}")
 
+
 # DA2 Analyze Stage
 
 def cmd_analyze(args) -> None:
@@ -187,6 +190,88 @@ def cmd_analyze(args) -> None:
         print("Skipping alignment report due to no commit tokens.")
 
 
+# ---------------- M1 Predict ----------------
+
+def cmd_predict(args) -> None:
+    out = args.output_dir
+    os.makedirs(out, exist_ok=True)
+
+    print("Loading commit data from DB...")
+    commit_records = m1_modeling.load_commit_data(
+        commit_limit=args.commit_limit
+    )
+
+    print(f"  {len(commit_records)} commits loaded")
+
+    if not commit_records:
+        print("No commits found.")
+        return
+
+    try:
+        id_rows = db_utils.exec_get_all("SELECT name FROM code_identifiers;")
+        identifier_tokens = da2_vocabulary.extract_vocabulary(
+            [r[0] for r in id_rows if r[0]]
+        )
+
+        cm_rows = db_utils.exec_get_all("SELECT comment_text FROM code_comments;")
+        comment_tokens = da2_vocabulary.extract_vocabulary(
+            [r[0] for r in cm_rows if r[0]]
+        )
+
+    except Exception as e:
+        print(f"Warning loading identifier/comment tokens: {e}")
+        identifier_tokens = []
+        comment_tokens = []
+
+    print("Building feature matrix...")
+
+    X, y, feature_names = m1_modeling.build_feature_matrix(
+        commit_records,
+        k=args.clusters,
+        identifier_tokens=identifier_tokens,
+        comment_tokens=comment_tokens,
+    )
+
+    print(f"X shape: {X.shape}")
+    print(f"Label distribution: {dict(Counter(y))}")
+
+    if len(set(y)) < 2:
+        print("Only one class label found. Cannot train model.")
+        return
+
+    X_train, X_test, y_train, y_test = m1_modeling.split_dataset(X, y)
+
+    print("Training classifier...")
+
+    model = m1_modeling.train_classifier(
+        X_train,
+        y_train,
+        model_type=args.model_type,
+        max_depth=args.max_depth,
+    )
+
+    results = m1_modeling.evaluate_model(model, X_test, y_test)
+
+    print(f"Accuracy: {results['accuracy']:.1%}")
+
+    fi_path = os.path.join(out, "feature_importance.png")
+    cm_path = os.path.join(out, "confusion_matrix.png")
+
+    m1_modeling.plot_feature_importance(
+        model,
+        feature_names,
+        output_path=fi_path,
+    )
+
+    m1_modeling.plot_confusion_matrix(
+        y_test,
+        results["y_pred"],
+        results["class_names"],
+        output_path=cm_path,
+    )
+
+    print(f"Saved plots → {fi_path}, {cm_path}")
+
 
 def main(argv=None):
     argv = argv or sys.argv[1:]
@@ -195,10 +280,13 @@ def main(argv=None):
     parser.add_argument("repo")
     parser.add_argument("--token")
     parser.add_argument("--analyze", action="store_true")
+    parser.add_argument("--predict", action="store_true")
     parser.add_argument("-k", "--clusters", type=int, default=5)
     parser.add_argument("--output-dir", default="output")
     parser.add_argument("--commit-limit", type=int, default=None)
     parser.add_argument("--file-limit", type=int, default=None)
+    parser.add_argument("--model-type", default="decision_tree", choices=["decision_tree", "random_forest"])
+    parser.add_argument("--max-depth", type=int, default=None)
 
     args = parser.parse_args(argv)
     run_analysis_after = args.analyze
@@ -234,12 +322,10 @@ def main(argv=None):
                 result_holder["error"] = e
         t = threading.Thread(target=run_miner, daemon=True)
         t.start()
-        t.join(timeout=300)  # increased timeout
+        t.join(timeout=300)
 
         if result_holder["error"]:
             raise result_holder["error"]
-        elif not result_holder["info"]:
-            print("Warning: No commits mined. DA2 analysis may be incomplete.")
 
         if result_holder["info"]:
             info = result_holder["info"]
@@ -247,39 +333,21 @@ def main(argv=None):
 
         _mine_code_artifacts(repo_path)
 
-        # ---- DI2 Commit Sampling Demo ----
         print("\nDI2 Sampling Demo")
         repo = Repo(repo_path)
         commits = list(repo.iter_commits())
 
         if commits:
-            # Uniform sample
             uniform_sample = sampling.sample_uniform(commits, k=min(10, len(commits)), seed=42)
             print(f"Uniform sample size: {len(uniform_sample)}")
-            for c in uniform_sample:
-                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
-
-            # Systematic sample
-            systematic_sample = sampling.sample_systematic(commits, step=5, seed=42)
-            print(f"Systematic sample size: {len(systematic_sample)}")
-            for c in systematic_sample:
-                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
-
-            # Stratified sample
-            def author_key(commit):
-                return getattr(commit.author, "email", "unknown")
-            stratified_sample = sampling.sample_stratified(commits, key=author_key, frac=0.2, seed=42)
-            print(f"Stratified sample size: {len(stratified_sample)}")
-            for c in stratified_sample:
-                print(f"  {c.hexsha} by {c.author.name} <{getattr(c.author, 'email', 'unknown')}>")
-
-            # Required labeling sample size
-            required_n = sampling.sample_size_proportion(N=len(commits), p=0.5, margin=0.05)
-            print(f"Required labeling sample size (95% CI): {required_n}")
 
         if run_analysis_after:
             print("\nStarting DA2 analysis...")
             cmd_analyze(args)
+
+        if args.predict:
+            print("\nStarting M1 prediction...")
+            cmd_predict(args)
 
     finally:
         if tmp_dir:
