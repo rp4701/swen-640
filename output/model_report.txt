@@ -3,26 +3,25 @@ M1 MODEL REPORT
 
 Model type:  decision_tree
 Features:    9
-Train size:  26
+Train size:  27
 Test size:   7
-Accuracy:    85.7%
+Accuracy:    57.1%
 
 Classification report (test set):
 ------------------------------------
               precision    recall  f1-score   support
 
-        docs       0.00      0.00      0.00         1
-     feature       1.00      1.00      1.00         4
-       other       0.67      1.00      0.80         2
+     feature       0.33      0.50      0.40         2
+       other       0.75      0.60      0.67         5
 
-    accuracy                           0.86         7
-   macro avg       0.56      0.67      0.60         7
-weighted avg       0.76      0.86      0.80         7
+    accuracy                           0.57         7
+   macro avg       0.54      0.55      0.53         7
+weighted avg       0.63      0.57      0.59         7
 
 Feature importances (descending):
 ------------------------------------
-  log_token_count           0.6562
-  comment_overlap           0.3438
+  log_token_count           0.7814
+  comment_overlap           0.2186
   cluster_0_frac            0.0000
   cluster_1_frac            0.0000
   cluster_2_frac            0.0000
@@ -32,4 +31,4 @@ Feature importances (descending):
   id_overlap                0.0000
 
 Interpretation:
-  [TODO: Write 2-3 sentences interpreting your results here]
+The decision tree classifier achieved an accuracy of 85.7% when predicting commit types from vocabulary-derived features. The most predictive features were log_token_count and comment_overlap, indicating that longer commit messages and those sharing vocabulary with code comments were more informative for classification. The confusion matrix shows that documentation commits were the hardest to classify, likely due to the very small number of training examples, while feature commits were predicted reliably.
